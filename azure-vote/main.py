@@ -22,24 +22,26 @@ from opencensus.ext.azure.trace_exporter import AzureExporter
 from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
 from opencensus.ext.flask.flask_middleware import FlaskMiddleware
-# For metrics
-stats = stats_module.stats
-view_manager = stats.view_manager
-
-config_integration.trace_integrations(['logging'])
-config_integration.trace_integrations(['requests'])
 
 # Instrumentation key
 instrumentation_key = 'InstrumentationKey=443015c4-8295-497f-99c9-956ccf0a9463'
 
+# For metrics
+stats = stats_module.stats
+view_manager = stats.view_manager
+
 # Logging
-logger = logging.getLogger(__name__)# TODO: Setup logger
+config_integration.trace_integrations(['logging'])
+config_integration.trace_integrations(['requests'])
+# Standard Logging
+logger = logging.getLogger(__name__)
 handler = AzureLogHandler(connection_string=instrumentation_key)
 handler.setFormatter(logging.Formatter('%(traceId)s %(spanId)s %(message)s'))
 logger.addHandler(handler)
+# Logging custom Events 
 logger.addHandler(AzureEventHandler(connection_string=instrumentation_key))
+# Set the logging level
 logger.setLevel(logging.INFO)
-
 
 # Metrics
 exporter = metrics_exporter.new_metrics_exporter(
@@ -49,17 +51,17 @@ view_manager.register_exporter(exporter)
 
 # Tracing
 tracer = Tracer(
- exporter=AzureExporter(
-     connection_string=instrumentation_key),
- sampler=ProbabilitySampler(1.0),
+    exporter=AzureExporter(
+        connection_string=instrumentation_key),
+    sampler=ProbabilitySampler(1.0),
 )
 app = Flask(__name__)
 
 # Requests
 middleware = FlaskMiddleware(
- app,
- exporter=AzureExporter(connection_string=instrumentation_key),
- sampler=ProbabilitySampler(rate=1.0)
+    app,
+    exporter=AzureExporter(connection_string=instrumentation_key),
+    sampler=ProbabilitySampler(rate=1.0)
 )
 
 # Load configurations from environment or config file
@@ -80,7 +82,6 @@ if ("TITLE" in os.environ and os.environ['TITLE']):
 else:
     title = app.config['TITLE']
 
-# Redis Connection
 r = redis.Redis()
 
 # Change title to host name to demo NLB
@@ -98,11 +99,14 @@ def index():
 
         # Get current values
         vote1 = r.get(button1).decode('utf-8')
-        # TODO: use tracer object to trace cat vote
-        tracer.span(name="Cats Vote")
+        # use tracer object to trace cat vote
+        with tracer.span(name="Cats Vote") as span:
+            print("Cats Vote")
         vote2 = r.get(button2).decode('utf-8')
-        # TODO: use tracer object to trace dog vote
-        tracer.span(name="Dogs Vote")
+        # use tracer object to trace dog vote
+        with tracer.span(name="Dogs Vote") as span:
+            print("Dogs Vote")
+
         # Return index with values
         return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
 
@@ -115,14 +119,14 @@ def index():
             r.set(button2,0)
             vote1 = r.get(button1).decode('utf-8')
             properties = {'custom_dimensions': {'Cats Vote': vote1}}
-            # TODO: use logger object to log cat vote
+            # use logger object to log cat vote
             logger.info('Cats Vote', extra=properties)
 
-
-            vote2 = r.get(button2).decode('utf-8')          
-            # TODO: use logger object to log dog vote
+            vote2 = r.get(button2).decode('utf-8')
             properties = {'custom_dimensions': {'Dogs Vote': vote2}}
+            # use logger object to log dog vote
             logger.info('Dogs Vote', extra=properties)
+
             return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
 
         else:
@@ -133,7 +137,14 @@ def index():
 
             # Get current values
             vote1 = r.get(button1).decode('utf-8')
+            properties = {"custom_dimensions": {"Cats Vote": vote1}}
+            # use logger object to log cat vote
+            logger.info("Cats Vote", extra=properties)
+            
             vote2 = r.get(button2).decode('utf-8')
+            properties = {"custom_dimensions": {"Dogs Vote": vote2}}
+            # use logger object to log dog vote
+            logger.info("Dogs Vote", extra=properties)
 
             # Return results
             return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
