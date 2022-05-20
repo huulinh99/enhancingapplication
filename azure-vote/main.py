@@ -24,7 +24,7 @@ from opencensus.trace.tracer import Tracer
 from opencensus.ext.flask.flask_middleware import FlaskMiddleware
 
 # Instrumentation key
-instrumentation_key = 'InstrumentationKey=12b00461-adb2-4511-a178-ea28c6117dba'
+instrumentation_key = 'InstrumentationKey=2ed3783e-90a0-47b3-8376-aa068db69bb2'
 
 # For metrics
 stats = stats_module.stats
