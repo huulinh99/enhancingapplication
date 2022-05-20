@@ -122,7 +122,7 @@ def index():
             vote2 = r.get(button2).decode('utf-8')          
             # TODO: use logger object to log dog vote
             properties = {'custom_dimensions': {'Dogs Vote': vote2}}
-	        logger.info('Dogs Vote', extra=properties)
+            logger.info('Dogs Vote', extra=properties)
             return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
 
         else:
